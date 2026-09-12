@@ -1,3 +1,14 @@
 {
-  "routes": [{ "route": "/*", "rewrite": "/api/proxy" }]
+  "routes": [
+    { "route": "/*", "rewrite": "/api/proxy" }
+  ],
+  "navigationFallback": {
+    "rewrite": "/api/proxy",
+    "exclude": ["/index.html", "/*.{css,js,png,jpg,svg,ico,woff,woff2}"]
+  },
+  "responseOverrides": {
+    "404": {
+      "rewrite": "/api/proxy"
+    }
+  }
 }
