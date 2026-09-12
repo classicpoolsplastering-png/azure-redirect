@@ -13,7 +13,6 @@ module.exports = async function (context, req) {
         if (!path.includes('?')) path += '?' + qs;
     }
     
-    // Block Cloudflare-injected requests
     if (path.startsWith('/cdn-cgi/')) {
         context.res = { status: 404, body: '' };
         return;
@@ -21,18 +20,17 @@ module.exports = async function (context, req) {
     
     context.log('Forwarding to:', path);
     
-    // Build headers - forward Content-Type correctly
     const forwardHeaders = {
         'Host': PANEL,
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': req.headers['accept'] || '*/*'
     };
     
+    // CRITICAL: forward content-type for POST bodies
     if (req.headers['content-type']) {
         forwardHeaders['Content-Type'] = req.headers['content-type'];
     }
     
-    // Prepare body - keep original string if possible
     let body;
     if (!['GET','HEAD'].includes(req.method)) {
         if (req.body) {
@@ -48,17 +46,11 @@ module.exports = async function (context, req) {
             method: req.method,
             headers: forwardHeaders,
             body: body,
-            redirect: 'manual'
+            redirect: 'follow'  // ← CRITICAL: follow Flask redirects
         });
         
         const responseBody = await r.text();
         const contentType = r.headers.get('content-type') || 'text/html';
-        
-        // Strip Cloudflare challenge script from HTML
-        let cleanedBody = responseBody;
-        if (contentType.includes('text/html') && responseBody.includes('/cdn-cgi/challenge-platform')) {
-            cleanedBody = responseBody.replace(/<script[^>]*src="\/cdn-cgi\/challenge-platform[^"]*"[^>]*><\/script>/gi, '');
-        }
         
         context.res = {
             status: r.status,
@@ -68,7 +60,7 @@ module.exports = async function (context, req) {
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type, Authorization'
             },
-            body: cleanedBody
+            body: responseBody
         };
     } catch (e) {
         context.log('Error:', e.message);
