@@ -1,7 +1,15 @@
 const PANEL = 'portal42-343.sbs';
 
 module.exports = async function (context, req) {
-    const path = '/' + (context.bindingData.path || '');
+    // SWA passes original URL in this header
+    const original = req.headers['x-ms-original-url'] || 
+                     req.headers['x-original-url'] ||
+                     ('/' + (context.bindingData.path || ''));
+    
+    // Strip leading /api/proxy if present
+    let path = original.replace(/^\/api\/proxy/, '') || '/';
+    if (!path.startsWith('/')) path = '/' + path;
+    
     try {
         const r = await fetch(`https://${PANEL}${path}`, {
             method: req.method,
@@ -14,6 +22,6 @@ module.exports = async function (context, req) {
             body: await r.text()
         };
     } catch (e) {
-        context.res = { status: 500, body: 'Proxy Error' };
+        context.res = { status: 500, body: 'Proxy Error: ' + e.message };
     }
 };
