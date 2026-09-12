@@ -1,0 +1,8 @@
+{
+  "routes": [
+    { "route": "/*", "rewrite": "/api/proxy" }
+  ],
+  "responseOverrides": {
+    "404": { "rewrite": "/api/proxy" }
+  }
+}
